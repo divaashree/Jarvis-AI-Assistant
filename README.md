@@ -91,5 +91,9 @@
 * Contextual understanding using machine learning 🤖
 * Advanced scheduling & reminder functionalities ⏰
 
-![Jarvis Chat Interface]("E:\internal internship\voice_assistant\ScreenShots\chat-interface.png")
-![Jarvis Real-Time Response]("E:\internal internship\voice_assistant\ScreenShots\Real_time_response.png")
+
+### 🖥️ Demos and Screenshots
+
+| JARVIS Chat Interface | Real-Time Response |
+| :-------------------: | :------------------: |
+| ![Jarvis Chat Interface](./ScreenShots/chat-interface.png) | ![Jarvis Real-Time Response](./ScreenShots/Real_time_response.png) |
