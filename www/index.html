@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>JARVIS - Virtual Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="{{ url_for('static', filename='avatar.png') }}" type="image/x-icon" />
+  <link rel="icon" href="{{ url_for('static', filename='avatar.png') }}" type="image/png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;500&display=swap" rel="stylesheet" />
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Roboto Mono', monospace;
+    }
+
+    body {
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* --- MAIN LAYOUT --- */
+    .main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+      width: 100%;
+    }
+
+    .main .image img {
+      width: 250px;
+    }
+
+    .main h1 {
+      color: #00bcd4;
+      font-size: 2.5rem;
+      margin: 10px 0;
+    }
+
+    /* This is the gray text "I'm a Virtual Assistant..." It now correctly targets only the main P tag */
+    .main > p { 
+      color: #546e7a; /* Slightly adjusted color for better contrast */
+      margin-bottom: 60px;
+      font-size: 1rem;
+    }
+
+    /* --- CHAT HISTORY & BUBBLES --- */
+    .chat-history {
+      padding: 10px 20px 10px 10px;
+      width: 90%;
+      max-width: 800px;
+      margin-bottom: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 10px;
+    }
+
+    .bubble {
+      padding: 10px 14px; /* Slightly more padding */
+      border-radius: 12px;
+      max-width: 75%;
+      word-wrap: break-word;
+      font-size: 0.9rem; /* Slightly larger for readability */
+      line-height: 1.5;  /* Increased line height */
+      opacity: 0;
+      animation: fadeIn 0.4s forwards;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+
+    .user-msg {
+      align-self: flex-end;
+      background: #1b7dbe;
+      color: white;
+      border-bottom-right-radius: 0;
+    }
+
+    /* --- BOT MESSAGE STYLES (KEY FIXES) --- */
+    .bot-msg {
+      align-self: flex-start;
+      background: #263238;
+      color: #b0bec5; /* Main text color for bot messages */
+      border-bottom-left-radius: 0;
+      text-align: left; /* Aligns text to the left, better than justify */
+    }
+
+    /* This ensures all elements inside the bot message inherit the readable color by default */
+    .bot-msg > * {
+      color: inherit;
+    }
+
+    .bot-msg h1, .bot-msg h2, .bot-msg h3 {
+      margin-top: 12px;
+      margin-bottom: 8px;
+      color: #4dd0e1; /* A nice cyan for headings */
+      line-height: 1.3;
+    }
+    
+    .bot-msg p {
+      margin-bottom: 12px; /* Consistent spacing */
+    }
+
+    .bot-msg ul, .bot-msg ol {
+      padding-left: 25px; /* Use padding for proper list indentation */
+      margin-bottom: 12px;
+    }
+    
+    .bot-msg li {
+      margin-bottom: 6px;
+    }
+
+    .bot-msg strong {
+      color: #ffffff; /* Make bold text stand out clearly */
+      font-weight: 600;
+    }
+    
+    .bot-msg code { /* Style for code blocks if Gemini sends them */
+      display: block;
+      background-color: rgba(0, 0, 0, 0.3);
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+      font-family: 'Roboto Mono', monospace;
+      white-space: pre-wrap; /* Allows code to wrap */
+    }
+
+
+    /* --- INPUT AREA & BUTTONS --- */
+    #textInput {
+      display: flex;
+      align-items: center;
+      background: linear-gradient(145deg, #0a0a0a, #111);
+      border: 1px solid #00bcd4;
+      border-radius: 10px;
+      padding: 6px 12px;
+      box-shadow: 0 0 12px rgba(0, 188, 212, 0.5);
+      width: 90%;
+      max-width: 700px;
+      gap: 10px;
+      transition: box-shadow 0.3s ease;
+    }
+
+    #textInput:focus-within {
+      box-shadow: 0 0 25px rgba(0, 188, 212, 0.8);
+    }
+
+    .input-field {
+      flex-grow: 1;
+      background-color: transparent;
+      border: none;
+      outline: none;
+      color: #aefcff;
+      font-size: 1rem;
+      font-family: inherit;
+      padding: 6px;
+      caret-color: #00bcd4;
+    }
+
+    .input-field::placeholder {
+      color: #888;
+      font-style: italic;
+    }
+
+    .glow-on-hover {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: #111;
+      color: #fff;
+      cursor: pointer;
+      border-radius: 10px;
+      position: relative;
+      z-index: 0;
+      transition: all 0.3s ease;
+    }
+
+    .glow-on-hover i {
+      font-size: 1.3rem;
+      transition: transform 0.2s ease;
+    }
+
+    .glow-on-hover:hover {
+      color: #00fff2;
+      background-color: #1c1c1c;
+      box-shadow: 0 0 15px #00fff2;
+    }
+
+    .glow-on-hover:hover i {
+      transform: scale(1.15);
+    }
+
+    .glow-on-hover:before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(45deg, #00f0ff, #007bff, #8a2be2, #5f00ba, #00ffe7, #005eff, #00ffc8);
+      background-size: 300%;
+      z-index: -1;
+      filter: blur(6px);
+      opacity: 0;
+      transition: 0.3s ease-in-out;
+      border-radius: 10px;
+    }
+
+    .glow-on-hover:hover:before {
+      opacity: 1;
+    }
+
+    .glow-on-hover:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      background: #111;
+      border-radius: 10px;
+      z-index: -1;
+    }
+
+    /* --- RESPONSIVE & SCROLLBAR --- */
+    @media (max-width: 768px) {
+      .main .image img {
+        width: 200px;
+      }
+      .main h1 {
+        font-size: 2rem;
+      }
+      #textInput {
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+    }
+
+    .chat-history::-webkit-scrollbar {
+      width: 6px; /* A bit thicker for easier grabbing */
+    }
+
+    .chat-history::-webkit-scrollbar-thumb {
+      background-color: #008c9e;
+      border-radius: 3px;
+    }
+
+    .chat-history::-webkit-scrollbar-track {
+      background: transparent;
+    }
+   
+  </style>
+</head>
+
+<body>
+  <section class="main">
+    <div class="image">
+     
+    <img src="{{ url_for('static', filename='giphy.gif') }}">
+    </div>
+    <h1>J A R V I S</h1>
+    <p>I'm a Virtual Assistant JARVIS, How may I help you?</p>
+
+    <!-- Chat History Container -->
+    <div id="chatHistory" class="chat-history"></div>
+
+    <!-- Input Box -->
+    <div id="textInput">
+      <input
+        type="text"
+        class="input-field"
+        id="chatbox"
+        placeholder="Type here..."
+        aria-label="Message input"
+      />
+      <button id="SendBtn" class="glow-on-hover" hidden aria-label="Send Message">
+        <i class="bi bi-send"></i>
+      </button>
+      <button id="MicBtn" class="glow-on-hover" aria-label="Mic Button">
+        <i class="bi bi-mic"></i>
+      </button>
+      <button id="ChatBtn" class="glow-on-hover" aria-label="Chat History">
+        <i class="bi bi-chat-dots"></i>
+      </button>
+      <button id="SettingsBtn" class="glow-on-hover" aria-label="Settings">
+        <i class="bi bi-gear"></i>
+      </button>
+    </div>
+  </section>
+  
+
+<script>
+    // --- JQUERY SELECTORS ---
+    const chatbox = $("#chatbox");
+    const micBtn = $("#MicBtn");
+    const sendBtn = $("#SendBtn");
+    const originalPlaceholder = chatbox.attr("placeholder");
+    const markdownConverter = new showdown.Converter();
+    
+    // --- SPEECH RECOGNITION SETUP (From Step 1) ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            chatbox.val(transcript);
+            ShowHideButton(transcript);
+            sendMessage();
+        };
+
+        recognition.onend = () => {
+            micActive = false;
+            micBtn.find("i").removeClass("bi-mic-fill").addClass("bi-mic");
+            chatbox.attr("placeholder", originalPlaceholder);
+            chatbox.prop("disabled", false);
+            ShowHideButton(chatbox.val());
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech Recognition Error:", event.error);
+            const errorMsg = "Sorry, I had trouble hearing you. " + event.error;
+            addChatBubble(errorMsg, "bot");
+            speak(errorMsg); // Also speak the error
+        };
+
+    } else {
+        micBtn.hide();
+        addChatBubble("Your browser does not support voice recognition.", "bot");
+    }
+
+    let micActive = false;
+
+    // --- UI FUNCTIONS ---
+    function ShowHideButton(message) {
+        if (message.trim() === "" && !micActive) {
+            micBtn.prop("hidden", false);
+            sendBtn.prop("hidden", true);
+        } else if (message.trim() !== "") {
+            micBtn.prop("hidden", true);
+            sendBtn.prop("hidden", false);
+        }
+    }
+
+    chatbox.on("input", function () {
+        let message = $(this).val();
+        ShowHideButton(message);
+    });
+
+    chatbox.keypress(function (e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            if (!micActive) {
+                sendMessage();
+            }
+        }
+    });
+
+    sendBtn.click(sendMessage);
+
+    micBtn.click(function () {
+        if (!SpeechRecognition) return;
+
+        micActive = !micActive;
+        if (micActive) {
+            micBtn.find("i").removeClass("bi-mic").addClass("bi-mic-fill");
+            chatbox.attr("placeholder", "🎤 Listening...");
+            chatbox.prop("disabled", true);
+            sendBtn.prop("hidden", true);
+            recognition.start();
+        } else {
+            recognition.stop();
+        }
+    });
+
+    // --- MAIN LOGIC FUNCTIONS ---
+    function sendMessage() {
+        const message = chatbox.val().trim();
+        if (message === "") return;
+
+        addChatBubble(message, "user");
+        chatbox.val(""); 
+        ShowHideButton("");
+
+        sendRequestToServer(message);
+    }
+    
+  // --- NEW, ROBUST TEXT-TO-SPEECH IMPLEMENTATION ---
+
+    // 1. A variable to hold our chosen voice object
+    let jarvisVoice = null;
+
+    // 2. A function to find and set the Jarvis voice
+    function loadVoices() {
+      const voices = window.speechSynthesis.getVoices();
+      // We are looking for a UK English Male voice. It sounds more formal.
+      // "Google UK English Male" is common on Chrome/Android.
+      // "Daniel" is the high-quality UK English Male voice on Apple devices.
+      jarvisVoice = voices.find(voice => voice.name === "Google UK English Male" || voice.name === "Daniel");
+      
+      // If we couldn't find it, we'll log a message and the system will use a default voice.
+      if (!jarvisVoice) {
+          console.log("Could not find the preferred 'Jarvis' voice. Using default.");
+      }
+    }
+
+    // 3. The browser tells us when its voice list has loaded.
+    // This is the correct way to ensure getVoices() is not empty.
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    // 4. The new, improved speak function
+    function speak(text) {
+        // THIS IS THE MOST IMPORTANT FIX:
+        // Cancel any previous speech to prevent the queue from getting stuck.
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // If we found our preferred voice, use it.
+        if (jarvisVoice) {
+            utterance.voice = jarvisVoice;
+        }
+        
+        // You can still configure pitch and rate
+        utterance.pitch = 0.9; 
+        utterance.rate = 1.1;  
+        
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // --- MODIFIED: SERVER COMMUNICATION FUNCTION ---
+    function sendRequestToServer(message) {
+      fetch("http://localhost:5000/process-command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: message }),
+      })
+      .then(res => res.json())
+      .then(data => {
+        const reply = data.response || "Sorry, I didn't get a valid response.";
+        addChatBubble(reply, "bot");
+
+        // <<< THIS IS THE NEW LINE THAT MAKES JARVIS SPEAK >>>
+        speak(reply);
+
+        // Handle opening URLs
+        if (data.action === "open_url" && data.url) {
+          window.open(data.url, '_blank');
+        }
+      })
+      .catch(err => {
+        console.error("Connection error:", err);
+        const errorMsg = "Sorry, I couldn't connect to the server.";
+        addChatBubble(errorMsg, "bot");
+        // <<< ALSO SPEAK THE ERROR MESSAGE >>>
+        speak(errorMsg); 
+      });
+    }
+
+  function addChatBubble(text, sender) {
+    const bubble = document.createElement("div");
+    bubble.className = `bubble ${sender === "user" ? "user-msg" : "bot-msg"}`;
+
+    if (sender === "bot") {
+        // If the message is from the bot, convert Markdown to HTML
+        const html = markdownConverter.makeHtml(text);
+        bubble.innerHTML = html; // Use .innerHTML to render the HTML tags
+    } else {
+        // If the message is from the user, just display it as plain text
+        bubble.textContent = text;
+    }
+
+    const chatHistory = document.getElementById("chatHistory");
+    chatHistory.appendChild(bubble);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+    // Initial state
+    ShowHideButton("");
+</script>
+</body>
+</html>
