@@ -83,6 +83,13 @@
 * "Send a WhatsApp message to Sarah 💬"
 
 ---
+## 👩‍💻 Collaborator
+**Divakar V**  
+[GitHub Profile](https://github.com/divaashree)
+**Madhu Shree D**
+[GitHub Profile](https://github.com/MADHUSHREE2006)
+
+---
 
 ## 🔮 Future Enhancements
 
